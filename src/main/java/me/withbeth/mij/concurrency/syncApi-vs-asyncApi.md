@@ -51,6 +51,7 @@ executorService.shutdown();
 - `Future형식 API`
  
   - API의 메서드 시그니처를 `Future<Integer> f(int x)`로 변환
+  - refer `UsingFutureTask.java`
   
 - `리액티브 형식 API`
  
@@ -58,5 +59,6 @@ executorService.shutdown();
   - 즉, `콜백` 형식의 프로그래밍 이용.
   - f()에서, 결과가 준비되면, 람다를 호출하는 태스크를 만드는 것이 포인트.
   - 비동기이여야하기에, 바디 실행 -> 결과 준비시 람다 호출하는 태스크 작성 -> 즉시 반환 하는 형식으로 작동.
+  - refer `UsingCallback.java`
 
 
