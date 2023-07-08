@@ -7,8 +7,8 @@ public class UsingThreadManually {
         int x = 1;
         PairResult.Builder resultBuilder = new PairResult.Builder();
 
-        Thread t1 = new Thread(() -> resultBuilder.left(f(x)));
-        Thread t2 = new Thread(() -> resultBuilder.right(g(x)));
+        Thread t1 = new Thread(() -> resultBuilder.left(ExternalAPIs.f(x)));
+        Thread t2 = new Thread(() -> resultBuilder.right(ExternalAPIs.g(x)));
 
         // start threads
         t1.start();
@@ -21,13 +21,7 @@ public class UsingThreadManually {
         System.out.println("result = " + result);
     }
 
-    static int f(int x) {
-        return x + 1;
-    }
 
-    static int g(int x) {
-        return x + 5;
-    }
 
     record PairResult(int left, int right) {
         static class Builder {
