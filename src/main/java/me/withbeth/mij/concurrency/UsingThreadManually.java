@@ -21,8 +21,6 @@ public class UsingThreadManually {
         System.out.println("result = " + result);
     }
 
-
-
     record PairResult(int left, int right) {
         static class Builder {
             private int left;
