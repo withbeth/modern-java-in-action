@@ -8,16 +8,8 @@ public class BlockingRandomPriceCalculator implements PriceCalculator {
 
     @Override
     public double calculatePrice(String productName) {
-        block(ONE_SECOND);
+        BlockingUtils.block(ONE_SECOND);
         return random.nextDouble() * productName.charAt(0) + productName.charAt(1);
     }
 
-    // 지연 흉내 헬퍼 메서드
-    public static void block(long blockTime) {
-        try {
-            Thread.sleep(blockTime);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }
