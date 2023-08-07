@@ -24,9 +24,16 @@ public class MyShop implements Shop {
         return priceCalculator.calculatePrice(productName);
     }
 
-    // non-blocking x async
     @Override
+    // non-blocking x async
     public Future<Double> getPriceAsync(String productName) {
+        // 예외발생시, 예외 정보 클라이언트에게 전달해주는 식으로 구현되어 있다.
+        // Checkout AsyncSupply.run()
+        return CompletableFuture.supplyAsync(() -> priceCalculator.calculatePrice(productName));
+    }
+
+    // non-blocking x async
+    public Future<Double> getPriceAsyncOld(String productName) {
         CompletableFuture<Double> futurePrice = new CompletableFuture<>();
 
         new Thread(() ->{

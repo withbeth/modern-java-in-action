@@ -27,13 +27,14 @@ public interface Shop {
 double getPrice(String productName);
 ```
 
-## 가격 찾는 동기메서드를 비동기로 메서드로 변환
+## API 개선 : 비동기 메서드 구현 
+
 > 비동기 계산 결과를 표현할 수 있는 Future인터페이스로 반환값 표현
 ```
 Future<Double> getPriceAsync(String productName);
 ```
 
-## 비동기메서드 예외 처리 방법 설정
+### 비동기메서드 예외 처리 방법 설정
 
 Client : Set Timeout.
 
@@ -59,11 +60,29 @@ Future<Double> getPriceAsync(String productName) {
             
         }
 
-    }) .start();
+    }).start();
 
     return futurePrice;
 }
 ```
+
+### CompletableFuture의 팩토리 메서드를 이용한 구현 개선
+```
+@Override
+// non-blocking x async
+public Future<Double> getPriceAsync(String productName) {
+    // 예외발생시, 예외 정보 클라이언트에게 전달해주는 식으로 구현되어 있다.
+    // Checkout AsyncSupply.run()
+    return CompletableFuture.supplyAsync(() -> priceCalculator.calculatePrice(productName));
+}
+```
+
+- CF.supplyAsync()를 이용해 Supplier를 넘기는 형식으로 구현 간단화.
+- 이때 해당 작업을 실행하는 Executor는 다음과 같다.
+  - **_Default : CF는 `ForkJoinPool`의 Executor중 하나를 선택해, Supplier를 실행하여 비동기적으로 결과 생성._**
+  - **_Customize : suuplyAsync()의 두번째 인자로, `실행할 Executor 지정 가능`_**
+
+
 
 # QnA
 
