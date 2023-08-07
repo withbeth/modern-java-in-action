@@ -1,6 +1,4 @@
-package me.withbeth.mij.concurrency;
-
-import java.util.function.IntConsumer;
+package me.withbeth.mij.concurrency.async.syncAndAsync;
 
 public class UsingCallback {
 

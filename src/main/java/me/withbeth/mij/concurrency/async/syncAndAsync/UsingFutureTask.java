@@ -1,4 +1,4 @@
-package me.withbeth.mij.concurrency;
+package me.withbeth.mij.concurrency.async.syncAndAsync;
 
 import java.util.concurrent.*;
 

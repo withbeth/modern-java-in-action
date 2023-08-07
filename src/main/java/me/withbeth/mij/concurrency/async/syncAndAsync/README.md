@@ -46,7 +46,7 @@ executorService.shutdown();
 - 코드는 더 단순화되었지만, 아직 submit같은 불필요한 코드가 남아있다.
 - 스트림 내부 반복 병렬화처럼, 조금 더 추상화 가능하지 않을까? 
 
-### Solution : `비동기API로 API를 변경해서 해결`
+## OptionC : `비동기API로 API를 변경해서 해결`
 
 - `Future형식 API`
  
@@ -61,4 +61,48 @@ executorService.shutdown();
   - 비동기이여야하기에, 바디 실행 -> 결과 준비시 람다 호출하는 태스크 작성 -> 즉시 반환 하는 형식으로 작동.
   - refer `UsingCallback.java`
 
+- `리액티브 형식의 단점`
+  - 콜백이 여러번 호출 될 수 있다 (리액티브는 일련의 이벤트(스트림)처리 용이므로.)
+  - 호출 합계를 정확히 출력되지 않고, 상황에 따라 먼저 계산된 결과를 출력한다.
+   
+  - 즉, 우리가 원하는 결과를 위해서는 일련의 스트림 처리용 리액티브보단, Future형식 이용 필요.
+  - 우리가 원했던 결과 : `각 함수들은 한번만 호출되며, 호출합계는 정확히 1번 출력되어야 한다.`
 
+## Summary So far
+
+정리하자면,
+- Future : 일회성 값 처리에 적합
+- 리액티브 : 일련의 스트림 처리에 적합
+
+그리고, 위 방식 이용시, 명시적으로 스레드를 처리하는 코드에 비해, 
+더 높은 수준의 추상화를 통해 사용코드를 더 단순하게 만들 수 있다.
+
+특히, 비동기API이므로, `blocking 작업(Computation or IO waiting)`에 적절히 활용시,
+서버의 리소스를 효율적으로 사용할 수 있다.
+
+
+
+## OptionD : CompletableFuture
+> CompletableFuture + Combinator 이용해 get()에서 블로킹 되지 않고 연산 수행 가능
+ 
+> refer `UsingCompletableFuture.java`
+
+```java
+int x = 1;
+ExecutorService executorService = Executors.newFixedThreadPool(3);
+
+CompletableFuture<Integer> a = new CompletableFuture<>();
+CompletableFuture<Integer> b = new CompletableFuture<>();
+// 두 작업을 합치는(조합하는) 별도 태스크 이용
+// - Future a, b의 결과를 알지 못하는 상태에서, 두 연산이 끝났을때 실행할 태스크 작성.
+CompletableFuture<Integer> c = a.thenCombine(b, (y, z) -> y + z);
+
+executorService.submit(() -> a.complete(ExternalAPIs.f(x)));
+executorService.submit(() -> b.complete(ExternalAPIs.g(x)));
+
+// 다른 두 작업이 끝날때까지 실행 X (=먼저 시작해서 blocking하지 않는다)
+Integer result = c.get();
+System.out.println("result = " + result);
+
+executorService.shutdown();
+```

@@ -1,4 +1,4 @@
-package me.withbeth.mij.concurrency;
+package me.withbeth.mij.concurrency.async.syncAndAsync;
 
 record PairResult(int left, int right) {
     static class Builder {
