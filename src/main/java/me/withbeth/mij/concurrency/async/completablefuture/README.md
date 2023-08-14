@@ -31,7 +31,9 @@ public interface Shop {
 double getPrice(String productName);
 ```
 
-## API 개선 : 비동기 메서드 구현
+# 비동기API제공 방법
+
+## API 개선 : 비동기 메서드 구현 
 
 > 비동기 계산 결과를 표현할 수 있는 Future인터페이스로 반환값 표현
 
@@ -92,15 +94,15 @@ public Future<Double> getPriceAsync(String productName) {
 
 -----
 
-# Shop API가 동기API만 지원할 경우, 최저 가격 검색 어플리케이션 구현
+# 동기서비스를 비동기적으로 소비하는 방법
+
+## Shop API가 동기API만 지원할 경우, 최저 가격 검색 어플리케이션 구현
 
 이번에는 반대로, 클라이언트 입장에서, Shop API가 Blocking x Sync API만 제공한다고 가정.
 
 즉, 블록동기메서드를 이용할 수 밖에 없는 상황에서, 다음의 요구사항을 진행.
 
 - 비동기적으로 여러 상점에 질의하며 블록되는 상황을 피해 최저 가격 검색
-
-## Flow
 
 가장 간단히 구현 가능한, "순차적"으로 ShopAPI를 호출해 가격을 획득하는 방법부터 구현하여 개선시켜 보자.
 
@@ -281,15 +283,37 @@ this.executor = Executors.newFixedThreadPool(
   -  WAITING/COMPUTING 비율에 맞는 적절한 스레드 수 제공 가능.
 
 
+# 여러 비동기 연산의 파이프라인화하여, 연산 결과를 하나로 합치는 방법
+
+TBD
+
+
+
+
+
 
 # QnA
 
 ## Q. How to test 비동기 메서드?
 
-## Q. ForkJoinPool default corePool, maxPool, queueCap default 설정? how to customize?
+## Q. 병렬스트림, 어떻게 내부적으로 병렬화가 일어나는가?
 
-## Q. How to mornitor ForkJoinPool?
+[ 지금 알고 있는 것]
 
+- Fork-Join Frameworkwork 이용.
+- Global  Fork-Join pool 이용.
+
+[ 알고 싶은 것 ]
+
+- CPU core수에 맞춰서, 자동으로 해당 코어수 만큼 스레드를 사용하는가?
+- 아니라면, 몇개의 스레드를 사용하는가?
+- Fork-Join Framework, 어떻게 이용하는가?
+
+## Q. 병렬스트림, Custom ForkJoinPool 이용 불가능한가?
+
+## Q. Fork-Join Thread Pool, default setting?(QueueCap, CorePoolNumber, MaxPoolNumber)
+
+## Q. How to monitor, ForkJoinPool?
 
 
  
