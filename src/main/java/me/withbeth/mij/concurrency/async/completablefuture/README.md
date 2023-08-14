@@ -6,13 +6,14 @@
 
 # Q. 이걸로 어떤걸 배울 수 있죠?
 
-- Open Async API제공방법
-- SyncAPI를, Async적으로 소비하는 방법
-- SyncAPI사용시, 코드를 non-blocking으로 만드는 방법.
-- SyncAPI사용시, 여러 Async 동작을 파이프라인으로 연결, 동작 결과를 하나의 비동기 계산으로 합치는 방법.
-    - > 예) 외부서비스로부터 할인코드 획득 -> 외부서비스로부터 할인율 획득 -> 원래 가격에 할인율 적용하여 최종결과 계산
-- Async 완료 대응방법
-    - > 예) 모든 상점에서 가격정보를 얻기까지 기다리는 것이 아니라, 각 가격 정보를 얻을때마다, "즉시" 최적가격 찾도록 대응
+- 비동기API제공 방법
+  - > A. 반환값을 Future인터페이스로. (비동기 계산 결과 표현하는 객체 반환)
+- 동기서비스를 비동기적으로 소비하는 방법
+  - > A. CompletableFuture 내부 연산으로 만들어, 별도 스레드를 할당해 연산 수행토록 변경.
+- 여러 비동기 연산의 파이프라인화하여, 연산 결과를 하나로 합치는 방법
+  - > 예) 외부서비스로부터 할인코드 획득 -> 외부서비스로부터 할인율 획득 -> 원래 가격에 할인율 적용하여 최종결과 계산
+- 비동기 연산 완료 대응방법
+  - > 예) 모든 상점에서 가격정보를 얻기까지 기다리는 것이 아니라, 각 가격 정보를 얻을때마다, "즉시" 최적가격 찾도록 대응
 
 # Flow
 
@@ -187,12 +188,7 @@ public List<Double> findPricesAsyncly(List<Shop> shops, String productName) {
 JavaAPI는 `corePool, maxPool, queueCap` 존재시,
 `corePool + queueCap`이 설정개수를 넘을 때에만, maxPool까지 채운다.
 
-
-## 그렇다면, 어떻게 CF연산에 CustomExecutor를 제공하는가?
-
-CF가 병렬스트림에 비해 해당 프로그램에 최적화된 설정 및 정책 사용가능하다.
-
-그렇다면, 해당 CF연산은, 몇개의 스레드를 이용해야 최적화 가능한가? 
+## 그렇다면, 위 CF연산에는, 몇개의 스레드를 이용해야 최적화 가능한가?
 
 ### 스레드 수 최적값 찾는 방법.
 
@@ -229,7 +225,7 @@ this.executor = Executors.newFixedThreadPool(
             @Override
             public Thread newThread(Runnable r) {
                 Thread thread = new Thread(r);
-                thread.setDaemon(true); // 데몬스레드를 생성함으로써, 메인 종료전, 스레드 종료하도록 설정
+                thread.setDaemon(true); // 메인 종료전, 스레드 종료가능토록 데몬스레드화. (이 예제에선 이로 인한 데이터 일관성 걱정 X)
                 return thread;
             }
         }
@@ -256,6 +252,34 @@ this.executor = Executors.newFixedThreadPool(
 > 비동기 호출 (Thread수 = Shops Size)
 - 즉, 각 상점이 하나의 스레드에 할당되어 실행되도록 최적화.
 - 따라서, 상점 개수가 늘어도 1초내 완료.
+
+## Summary So far
+
+> 컬렉션 계산을 병렬화 하는 방법에는 대표적으로 2가지가 있다.
+
+1)컬렉션을 병렬스트림으로 전환
+
+2)컬렉션반복하며, CF내부 연산으로 만드는 방법
+
+- CF이용시, Custom Executor를 설정가능하여, 해당 프로그램에 맞는 최적화된 설정, 스레드풀 설정가능.
+- 즉, CF이용시, 블록되는 계산이 없도록, 스레드풀 크기를 조절할 수 있다.
+
+그렇다면, 언제 어느 방법을 써야 하나?
+
+[ 병렬스트림 ]
+
+> CPU bound한 연산 이용시.
+
+- CPU bound한 연산 수행시에는, CPU 코어 수 이상의 스레드를 가질 필요가 없다.
+
+
+[ CF ]
+
+> IO bound(waiting block) 연산 이용시.
+
+- CF이용시 커스컴 Executor를 설정가능. = 더 많은 유연성 제공.
+  -  WAITING/COMPUTING 비율에 맞는 적절한 스레드 수 제공 가능.
+
 
 
 # QnA
