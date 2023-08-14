@@ -235,10 +235,27 @@ this.executor = Executors.newFixedThreadPool(
         }
 ```
 
+## 성능측정2 : 비동기 호출 (Thread수 = 4) vs 비동기 호출 (Thread수 = Shops Size)
 
+> Macbook air M2 기준 (Core CPU수 = 8개)
 
+| ShopSize | AS-IS  | TO-BE  |
+|----------|--------|--------|
+| 1        | 1009ms | 1026ms |
+| 4        | 1006ms | 1004ms |
+| 8        | 2009ms | 1008ms |
+| 16       | 3012ms | 1007ms |
+| 32       | 5018ms | 1010ms |
 
+[ AS-IS ]
+> 비동기 호출 (Thread수 = 4)
+- 따라서, 4개 상점까지는 1초내 완료.
+- 그 이상은, 누군가의 스레드가 작업완료하여 스레드가 빌때 까지 대기.
 
+[ TO-BE ]
+> 비동기 호출 (Thread수 = Shops Size)
+- 즉, 각 상점이 하나의 스레드에 할당되어 실행되도록 최적화.
+- 따라서, 상점 개수가 늘어도 1초내 완료.
 
 
 # QnA
