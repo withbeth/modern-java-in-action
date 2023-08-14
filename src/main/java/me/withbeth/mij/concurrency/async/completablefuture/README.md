@@ -174,25 +174,81 @@ public List<Double> findPricesAsyncly(List<Shop> shops, String productName) {
 - 기본 스레드 풀 개수 = 4개. 
 - 따라서, 4개 상점까지는 1초내 완료.
 - 그 이상은, 누군가의 스레드가 작업완료하여 스레드가 빌때 까지 대기.
- 
-- Q. ForkJoinPool의 corePool, maxPool, queueCap?
-
-## 주의 할 점
-> JavaAPI의 스레드풀 관리방법은, DB POOL의 그것 과 다르다.
- 
-JavaAPI는 `corePool, maxPool, queueCap` 존재시, 
-`corePool + queueCap`이 설정개수를 넘을 때에만, maxPool까지 채운다. 
 
 ## So What ?
 
 > 그렇다면, `병렬스트림`과, `CF이용한 비동기 호출 방법`중,어느게 더 좋은 방법일까?
 
-CF는 병렬 스트림에 비해, 다양한 Executor(ThreadPool)을 지정할수 있다는 장점이 있다.
-따라서 해당 프로그램에 최적화된 설정 및 정책을 적용가능하다.
+- Answer : CF는 병렬 스트림에 비해, **_다양한 Executor(ThreadPool) 지정 + 해당 프로그램에 최적화된 설정 및 정책 적용_** 가능.
+
+## Java 스레드풀 주의 할 점
+> JavaAPI의 스레드풀 관리방법은, DB POOL의 그것 과 다르다.
+
+JavaAPI는 `corePool, maxPool, queueCap` 존재시,
+`corePool + queueCap`이 설정개수를 넘을 때에만, maxPool까지 채운다.
+
+
+## 그렇다면, 어떻게 CF연산에 CustomExecutor를 제공하는가?
+
+CF가 병렬스트림에 비해 해당 프로그램에 최적화된 설정 및 정책 사용가능하다.
+
+그렇다면, 해당 CF연산은, 몇개의 스레드를 이용해야 최적화 가능한가? 
+
+### 스레드 수 최적값 찾는 방법.
+
+> 최적 스레드 수 = CPU코어수 * CPU활용비율(0~1) * (1 + WAITING/COMPUTING 비율(0~100)) 
+
+- CPU코어수 = `Runtime.getRuntime().availableProcessors()`로 알 수 있다.
+- CPU활용비율 = 0~1 사이 값을 갖는 CPU 활용 비율
+- WAITING/COMPUTING 비율 = 대기시간과, 계산시간 비율
+
+### 그럼, 이 예제에서의 최적의 스레드 수는 몇개 인가?
+
+위 공식에 값을 대입해 보자.
+
+- CPU코어수 = 8
+- CPU활용비율(0~1) = 1 (100%)라 가정.
+- WAITING/COMPUTING비율(0~100) = 상점의 응답 기다리는게 99%이니, 100이라 가정.
+
+따라서, 최적 스레드수 = 8 * 1 * 101 = 808 개가 된다.
+
+?!
+
+하지만, 상점 수 보다 많은 스레드를 가지고 있어봐야 사용할 가능성이 없기에, 그 보다 많은 스레드는 불필요하다.
+
+오히려, 스레드 수가 많으면 서버가 크래시할 가능성이 있다. (OS에서 생성가능한 스레드 개수는 정해져 있으므로)
+
+결론적으로, **한 상점당 한 스레드 (1 Thread per 1 Shop)** 할당 가능하도록 Executor를 설정하면 좋을 것 같다.
+
+그래야, 스레드 대기 없이 모든 스레드들이 non-blocking x async 연산이 가능하고, 후에 merge가 가능할 것.
+
+```
+this.executor = Executors.newFixedThreadPool(
+        Math.min(shops.size(), 100), // shops.size 또는, 최대 100개 까지의 스레드만 허용
+        new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r);
+                thread.setDaemon(true); // 데몬스레드를 생성함으로써, 메인 종료전, 스레드 종료하도록 설정
+                return thread;
+            }
+        }
+```
+
+
+
+
+
 
 
 # QnA
 
 ## Q. How to test 비동기 메서드?
+
+## Q. ForkJoinPool default corePool, maxPool, queueCap default 설정? how to customize?
+
+## Q. How to mornitor ForkJoinPool?
+
+
 
  

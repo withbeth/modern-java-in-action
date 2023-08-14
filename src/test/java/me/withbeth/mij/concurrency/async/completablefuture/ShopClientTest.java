@@ -5,7 +5,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 class ShopClientTest {
 
@@ -20,29 +20,37 @@ class ShopClientTest {
         return results;
     }
 
-    private void calculateExecutionTime(BiFunction<List<Shop>, String, List<String>> shopPricesFinder,
-                                        List<Shop> shops) {
+    private void calculateExecutionTime(Function<String, List<String>> shopPricesFinder) {
+
+        System.out.println("Available CPU Core Numbers = " + Runtime.getRuntime().availableProcessors());
+
         final String productName = "PS5";
+
         final long start = System.nanoTime();
 
-        System.out.println("Start to find shop numbers :" + shops.size());
-
-        System.out.println(shopPricesFinder.apply(shops, productName));
+        System.out.println(shopPricesFinder.apply(productName));
 
         final long duration = ( System.nanoTime() - start ) / 1_000_000;
+
         System.out.println("Done in " + duration + " msecs");
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1, 4, 8, 16, 32})
     void findPriceParallely(final int shopNumbers) {
-        calculateExecutionTime(ShopClient::findPricesParallely, createShops(shopNumbers));
+        System.out.println("Shop numbers :" + shopNumbers);
+
+        final ShopClient shopClient = new ShopClient(createShops(shopNumbers));
+        calculateExecutionTime(shopClient::findPricesParallely);
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1, 4, 8, 16, 32})
     void findPriceAsyncly(final int shopNumbers) {
-        calculateExecutionTime(ShopClient::findPricesAsyncly, createShops(shopNumbers));
+        System.out.println("Shop numbers :" + shopNumbers);
+
+        final ShopClient shopClient = new ShopClient(createShops(shopNumbers));
+        calculateExecutionTime(shopClient::findPricesAsyncly);
     }
 
 }
