@@ -6,6 +6,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 class ShopClientTest {
 
@@ -13,9 +14,11 @@ class ShopClientTest {
         assert shopNumbers > 0;
 
         final PriceCalculator priceCalculator = new BlockingRandomPriceCalculator();
+        final Supplier<Discount.Code> codeSupplier = new RandomDiscountCodeSupplier();
+
         final List<Shop> results = new ArrayList<>(shopNumbers);
         for (int i = 1; i <= shopNumbers; i++) {
-            results.add(new MyShop("Shop #" + i, priceCalculator));
+            results.add(new MyShop("Shop #" + i, priceCalculator, codeSupplier));
         }
         return results;
     }

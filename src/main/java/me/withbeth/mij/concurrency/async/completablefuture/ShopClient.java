@@ -29,21 +29,17 @@ public class ShopClient {
         );
     }
 
-    private static String formatShopPrice(Shop shop, Double productPrice) {
-        return String.format("%s price is %.2f", shop.getName(), productPrice);
-    }
-
     // 주어진 상점에, "순차적"으로 정보를 요청하여 주어진 상품명의 가격을 반환
     public List<String> findPrices(String productName) {
         return this.shops.stream()
-                .map(shop -> formatShopPrice(shop, shop.getPrice(productName)))
+                .map(shop -> shop.getPrice(productName))
                 .collect(Collectors.toList());
     }
 
     // 주어진 상점에, "병렬 스트림으로" 요청을 병렬화
     public List<String> findPricesParallely(String productName) {
         return this.shops.parallelStream()
-                .map(shop -> formatShopPrice(shop, shop.getPrice(productName)))
+                .map(shop -> shop.getPrice(productName))
                 .collect(Collectors.toList());
     }
 
@@ -51,9 +47,7 @@ public class ShopClient {
     public List<String> findPricesAsyncly(String productName) {
         final List<CompletableFuture<String>> futurePrices = this.shops.stream()
                 // 각 상점의 가격 요청을 non-blocking x async하게 호출
-                .map(shop -> CompletableFuture.supplyAsync(
-                        () -> formatShopPrice(shop, shop.getPrice(productName)),
-                        executor))
+                .map(shop -> CompletableFuture.supplyAsync(() -> shop.getPrice(productName), executor))
                 .collect(Collectors.toList());
 
         // 스트림처리를 하나의 파이프라인으로 처리할경우, 스트림의 lazy 처리가 작동하여, 모든 가격 정보 요청이 동기적, 순차적으로 이뤄질수 있다.
@@ -69,11 +63,14 @@ public class ShopClient {
 
     public static void main(String[] args) {
 
-        final Shop shop = new MyShop("BestShop", new BlockingRandomPriceCalculator());
+        final Shop shop = new MyShop(
+                "BestShop",
+                new BlockingRandomPriceCalculator(),
+                new RandomDiscountCodeSupplier());
 
         final long start = System.nanoTime();
 
-        Future<Double> futurePrice = shop.getPriceAsync("favorite product");
+        Future<String> futurePrice = shop.getPriceAsync("favorite product");
 
         final long invocationTime = (System.nanoTime() - start) / 1_000_000;
         System.out.println("Invocation returned after " + invocationTime + " ms");
@@ -84,8 +81,8 @@ public class ShopClient {
         // 다른 작업 수행이 끝난후, 제품명에 대한 가격이 필요한 경우.
         try {
             // blocking until get the result
-            final double price = futurePrice.get(2, TimeUnit.SECONDS);
-            System.out.printf("Price is %.2f%n", price);
+            final String price = futurePrice.get(2, TimeUnit.SECONDS);
+            System.out.println("price = " + price);
 
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new RuntimeException(e);

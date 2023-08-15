@@ -6,8 +6,8 @@ public interface Shop {
 
     String getName();
 
-    double getPrice(String productName);
+    String getPrice(String productName);
 
-    Future<Double> getPriceAsync(String productName);
+    Future<String> getPriceAsync(String productName);
 
 }

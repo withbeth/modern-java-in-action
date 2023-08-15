@@ -19,12 +19,14 @@ class MyShopTest {
         final long ONE_SECOND = 1000L;
         final long TWO_SECOND = 2000L;
 
-        final Shop shop = new MyShop("BestShop", ((productName) -> {
-            BlockingUtils.block(TWO_SECOND);
-            return 1.0;
-        }));
+        final Shop shop = new MyShop(
+                "BestShop",
+                ((productName) -> {
+                    BlockingUtils.block(TWO_SECOND); return 1.0;
+                }),
+                ()-> Discount.Code.DIAMOND);
 
-        Future<Double> futurePrice = shop.getPriceAsync("favorite product");
+        Future<String> futurePrice = shop.getPriceAsync("favorite product");
 
         assertThatThrownBy(() -> futurePrice.get(ONE_SECOND, TimeUnit.MILLISECONDS))
                 .isInstanceOf(TimeoutException.class);
@@ -33,11 +35,14 @@ class MyShopTest {
     @DisplayName("가격계산 중 장애발생시, 어떠한 에러가 발생했는지 알 수 있어야 한다.")
     @Test
     void shouldKnowCalculatingPriceErrorCause() {
-        final Shop shop = new MyShop("BestShop", ((productName) -> {
-            throw new RuntimeException("알 수 없는 장애 발생");
-        }));
+        final Shop shop = new MyShop(
+                "BestShop",
+                ((productName) -> {
+                    throw new RuntimeException("알 수 없는 장애 발생");
+                }),
+                () -> Discount.Code.DIAMOND);
 
-        Future<Double> futurePrice = shop.getPriceAsync("favorite product");
+        Future<String> futurePrice = shop.getPriceAsync("favorite product");
 
         assertThatThrownBy(() -> futurePrice.get())
                 .isInstanceOf(ExecutionException.class)

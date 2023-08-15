@@ -194,7 +194,7 @@ JavaAPI는 `corePool, maxPool, queueCap` 존재시,
 
 ### 스레드 수 최적값 찾는 방법.
 
-> 최적 스레드 수 = CPU코어수 * CPU활용비율(0~1) * (1 + WAITING/COMPUTING 비율(0~100)) 
+`최적 스레드 수 = CPU코어수 * CPU활용비율(0~1) * (1 + WAITING/COMPUTING 비율(0~100))`
 
 - CPU코어수 = `Runtime.getRuntime().availableProcessors()`로 알 수 있다.
 - CPU활용비율 = 0~1 사이 값을 갖는 CPU 활용 비율
@@ -284,6 +284,32 @@ this.executor = Executors.newFixedThreadPool(
 
 
 # 여러 비동기 연산의 파이프라인화하여, 연산 결과를 하나로 합치는 방법
+
+## 할인 서비스 추가
+
+- 들어가기전에, 모든 상점이 "하나의 할인 서비스"를 사용한다고 가정.
+- 해당 할인 서비스에서는, 서로 다른 할인율을 제공.
+
+```java
+public class Discount {
+    public enum Code {
+        NONE(0),
+        SILVER(5),
+        GOLD(10),
+        PLATINUM(15),
+        DIAMOND(20),
+        ;
+
+        private final int percentage;
+
+        Code(int percentage) {
+            this.percentage = percentage;
+        }
+    }
+}
+```
+
+## 비동기 연산 파이프라인 만들기
 
 TBD
 
