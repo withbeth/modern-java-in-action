@@ -285,33 +285,126 @@ this.executor = Executors.newFixedThreadPool(
 
 # 여러 비동기 연산의 파이프라인화하여, 연산 결과를 하나로 합치는 방법
 
-## 할인 서비스 추가
+## 연산 추가 - 원격 서비스를 이용한 할인률 계산 
 
-- 들어가기전에, 모든 상점이 "하나의 할인 서비스"를 사용한다고 가정.
-- 해당 할인 서비스에서는, 서로 다른 할인율을 제공.
+연산을 하나 더 추가해 보자.
 
-```java
-public class Discount {
-    public enum Code {
-        NONE(0),
-        SILVER(5),
-        GOLD(10),
-        PLATINUM(15),
-        DIAMOND(20),
-        ;
+바로, 해당 상점의 할인률을 계산해서 반환해주는 '할인 서비스'이다.
 
-        private final int percentage;
+상점과 마찬가지로, 이 할인 서비스도 REMOTE로 제공 되는 서비스이며, 할인률 계산시 1초간 BLOCKING된다고 가정.
 
-        Code(int percentage) {
-            this.percentage = percentage;
-        }
+```
+class BlockingDiscountService implements DiscountService {
+    private static final long ONE_SECOND = 1000L;
+    private static final Random random = new Random();
+
+    @Override
+    public String applyDiscount(Quote quote) {
+        return quote.getShopName()
+                + " price is "
+                + String.format("%.2f", calculatePrice(quote.getPrice(), quote.getDiscountCode()));
+    }
+
+    private static double calculatePrice(double price, DiscountCode code) {
+        BlockingUtils.block(ONE_SECOND);
+        return (price * (100 - code.getPercentage()) / 100);
     }
 }
 ```
 
+## 할인 서비스 사용
+
+이제, 흐름은 다음과 같다.
+
+- 상점서비스(1초간 blocking되는 동기API)를 호출하여, 해당 상품에 해당 상품가격 획득.
+- 할인서비스(1초간 blocking되는 동기API)를 호출하여, 해당 상점과 상점가격으로부터 할인된 가격 획득.
+
+## 동기, 순차적인 방식으로 구현
+
+```
+List<String> findPrices(String productName) {
+    return this.shops.stream()
+            .map(shop -> shop.getPrice(productName))
+            .map(Quote::parse)
+            .map(discountService::applyDiscount)
+            .collect(Collectors.toList());
+}
+```
+
+## 병렬 스트림으로 구현
+
+```
+// 주어진 상점에, "병렬 스트림으로" 요청을 병렬화
+List<String> findPricesParallely(String productName) {
+    return this.shops.parallelStream()
+            .map(shop -> shop.getPrice(productName))
+            .map(Quote::parse)
+            .map(discountService::applyDiscount)
+            .collect(Collectors.toList());
+}
+```
+
+다만, 위에서도 언급했듯, 병렬스트림은 기본적으로 `앱에서 사용하는 공통의 포크-조인 풀`에서 수행되기에,
+
+`사용할 수 있는 스레드 풀의 크기가 고정`되어 있다.
+
+따라서, 병렬스트림으로 처리해도 상점수가 늘어난다면 유연하게 대응이 불가능 하다 (= 성능 향상이 상점수가 4개를 넘어간다면 미미하다.)
+
 ## 비동기 연산 파이프라인 만들기
 
-TBD
+```
+// non-blocking x async 하게 모든 상점의 가격 호출
+List<String> findPricesAsyncly(String productName) {
+    final List<CompletableFuture<String>> futurePrices = this.shops.stream()
+    
+            // 1) 동기작업인 상점 가격 조회를 비동적으로 수행.
+            .map(shop -> CompletableFuture.supplyAsync(() -> shop.getPrice(productName), executor))
+            
+            // 2) Quote객체로 Parsing(NO IO waiting needed)
+            // Note : CF.thenApply()는, CF가 끝날때까지 블록하지 않는다.
+            //        즉, CF가 동작을 완전히 완료후에, thenApply()로 전달된 람다표현식을 적용한다.
+            .map(completableFuture -> completableFuture.thenApply(Quote::parse))
+            
+            // 3) 2개의 비동기 연산을 파이프라이닝 using CF.thenCompose()
+            .map(completableFuture -> completableFuture.thenCompose(quote ->
+                    // 동기작업인 할인률 획득을 비동기적으로 수행
+                    // 2번째 비동기 연산은, 첫번째 비동기 연산 결과를 입력으로 사용.
+                    CompletableFuture.supplyAsync(() -> discountService.applyDiscount(quote), executor)))
+                    
+            .collect(Collectors.toList());
+
+    // 스트림처리를 하나의 파이프라인으로 처리할경우, 스트림의 lazy 처리가 작동하여, 모든 가격 정보 요청이 동기적, 순차적으로 이뤄질수 있다.
+    // 따라서, 별도 스트림으로 나누어 처리.
+
+    return futurePrices.stream()
+            // CF.join()을 이용해 비동기 연산이 끝나길 기다린다.
+            // CF.join 연산 = Future.get과 같이 비동기 동작 결과 획득.
+            // 차이점 = 계산중 예외발생하거나, 취소시 예외발생시, throw UNCHECKED exception
+            .map(CompletableFuture::join)
+            .collect(Collectors.toList());
+}
+
+```
+
+각 상점마다, 별도의 Executor스레드에서 1~3까지 작업 수행후 CF.join()을 통해 결과 획득.
+
+1)비동기적으로 상점서비스에서 가격조회.
+
+2)`CF.thenApply()`를 호출해, 1의 CF결과값을 다른값으로 변환(1의 CF동작이 완전히 완료후 수행됨)
+
+3)`CF.thenCompose()`를 이용해, 1의 비동기 연산결과값을, 두번째 비동기 연산(할인서비스 조회)에 제공.
+
+각 연산들마다 Asyc로 끝나는 버전(다음 작업이 별도 스레드에서 실행되도록 작업 제출)이 존재하나,
+
+위 예제에서는 2번째 비동기 연산이, 1번째 비동기 연산에 의존하므로, 같은 스레드에서 실행되도록 수행.
+
+이를 통해, 스레드 전환 오버헤드가 적게 발생.
+
+
+
+
+
+
 
 
 

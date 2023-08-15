@@ -24,7 +24,7 @@ class MyShopTest {
                 ((productName) -> {
                     BlockingUtils.block(TWO_SECOND); return 1.0;
                 }),
-                ()-> Discount.Code.DIAMOND);
+                ()-> DiscountCode.DIAMOND);
 
         Future<String> futurePrice = shop.getPriceAsync("favorite product");
 
@@ -40,7 +40,7 @@ class MyShopTest {
                 ((productName) -> {
                     throw new RuntimeException("알 수 없는 장애 발생");
                 }),
-                () -> Discount.Code.DIAMOND);
+                () -> DiscountCode.DIAMOND);
 
         Future<String> futurePrice = shop.getPriceAsync("favorite product");
 

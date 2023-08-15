@@ -7,17 +7,17 @@ import java.util.function.Supplier;
 public class MyShop implements Shop {
     private final String shopName;
     private final PriceCalculator priceCalculator;
-    private final Supplier<Discount.Code> couponSupplier;
+    private final Supplier<DiscountCode> couponSupplier;
 
     public MyShop(final String shopName,
                   final PriceCalculator priceCalculator,
-                  final Supplier<Discount.Code> codeSupplier) {
+                  final Supplier<DiscountCode> codeSupplier) {
         this.shopName = shopName;
         this.priceCalculator = priceCalculator;
         this.couponSupplier = codeSupplier;
     }
 
-    private String formatShopPrice(Double productPrice, Discount.Code code) {
+    private String formatShopPrice(Double productPrice, DiscountCode code) {
         return String.format("%s:%.2f:%s", getName(), productPrice, code);
     }
 
@@ -29,8 +29,8 @@ public class MyShop implements Shop {
     // blocking x sync
     @Override
     public String getPrice(String productName) {
-        double price = priceCalculator.calculatePrice(productName);
-        Discount.Code code = couponSupplier.get();
+        final double price = priceCalculator.calculatePrice(productName);
+        final DiscountCode code = couponSupplier.get();
         return formatShopPrice(price, code);
     }
 

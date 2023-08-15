@@ -14,7 +14,7 @@ class ShopClientTest {
         assert shopNumbers > 0;
 
         final PriceCalculator priceCalculator = new BlockingRandomPriceCalculator();
-        final Supplier<Discount.Code> codeSupplier = new RandomDiscountCodeSupplier();
+        final Supplier<DiscountCode> codeSupplier = new RandomDiscountCodeSupplier();
 
         final List<Shop> results = new ArrayList<>(shopNumbers);
         for (int i = 1; i <= shopNumbers; i++) {
@@ -43,7 +43,7 @@ class ShopClientTest {
     void findPriceParallely(final int shopNumbers) {
         System.out.println("Shop numbers :" + shopNumbers);
 
-        final ShopClient shopClient = new ShopClient(createShops(shopNumbers));
+        final ShopClient shopClient = new ShopClient(createShops(shopNumbers), new BlockingDiscountService());
         calculateExecutionTime(shopClient::findPricesParallely);
     }
 
@@ -52,7 +52,7 @@ class ShopClientTest {
     void findPriceAsyncly(final int shopNumbers) {
         System.out.println("Shop numbers :" + shopNumbers);
 
-        final ShopClient shopClient = new ShopClient(createShops(shopNumbers));
+        final ShopClient shopClient = new ShopClient(createShops(shopNumbers), new BlockingDiscountService());
         calculateExecutionTime(shopClient::findPricesAsyncly);
     }
 
